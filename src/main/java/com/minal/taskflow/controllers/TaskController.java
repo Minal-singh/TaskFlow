@@ -4,6 +4,7 @@ import com.minal.taskflow.dto.TaskRequestDto;
 import com.minal.taskflow.dto.TaskResponseDto;
 import com.minal.taskflow.dto.TaskUpdateDto;
 import com.minal.taskflow.services.TaskService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/tasks")
+@Tag(name = "Tasks APIs")
 public class TaskController {
     private final TaskService taskService;
 
