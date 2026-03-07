@@ -1,9 +1,11 @@
 package com.minal.taskflow.controllers;
 
+import com.minal.taskflow.dto.UserLoginDto;
 import com.minal.taskflow.dto.UserRequestDto;
 import com.minal.taskflow.dto.UserResponseDto;
 import com.minal.taskflow.services.UserService;
 import com.minal.taskflow.utils.JWTUtils;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
+@Tag(name = "Public APIs")
 public class PublicEndpointsController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
@@ -41,7 +44,7 @@ public class PublicEndpointsController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody UserRequestDto userDto) {
+    public ResponseEntity<String> login(@RequestBody UserLoginDto userDto) {
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(userDto.getUserName(), userDto.getPassword())
