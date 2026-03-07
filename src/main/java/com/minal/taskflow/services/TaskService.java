@@ -36,12 +36,12 @@ public class TaskService {
     public TaskResponseDto getTaskById(UUID id, String userName) {
         log.info("Fetching task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         TaskModel task = taskRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> {
                     log.error("Task not found with id: {} for user: {}", id, userName);
-                    return new TaskNotFoundException("Task not found");
+                    return new TaskNotFoundException();
                 });
 
         log.info("Task retrieved successfully: {}", id);
@@ -51,7 +51,7 @@ public class TaskService {
     public TaskResponseDto createTask(TaskRequestDto newTask, String userName) {
         log.info("Creating task for user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         TaskModel task = mapper.toTaskEntity(newTask);
         task.setUser(user);
@@ -63,12 +63,12 @@ public class TaskService {
     public TaskResponseDto updateTask(UUID id, String userName, TaskUpdateDto newTask) {
         log.info("Updating task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         TaskModel oldTask = taskRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> {
                     log.error("Task not found for update with id: {} for user: {}", id, userName);
-                    return new TaskNotFoundException("Task not found");
+                    return new TaskNotFoundException();
                 });
 
         if (newTask.getTitle() != null && !newTask.getTitle().isEmpty()) {
@@ -99,12 +99,12 @@ public class TaskService {
     public void deleteTask(UUID id, String userName) {
         log.info("Deleting task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         TaskModel task = taskRepository.findByIdAndUser(id, user)
                 .orElseThrow(() -> {
                     log.error("Task not found for deletion with id: {} for user: {}", id, userName);
-                    return new TaskNotFoundException("Task not found");
+                    return new TaskNotFoundException();
                 });
 
         taskRepository.deleteById(task.getId());
@@ -114,7 +114,7 @@ public class TaskService {
     public List<TaskResponseDto> getAllTasksForUser(String userName) {
         log.info("Fetching all tasks for user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         List<TaskModel> tasks = taskRepository.findByUser(user);
         log.info("Retrieved {} tasks for user: {}", tasks.size(), userName);

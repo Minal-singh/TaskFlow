@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class SwaggerConfig {
     @Bean
-    public OpenAPI CustomConfig() {
+    public OpenAPI customConfig() {
         return new OpenAPI()
                 .info(
                         new Info().title("TaskFlow App API")

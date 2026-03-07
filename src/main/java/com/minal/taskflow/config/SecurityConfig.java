@@ -1,7 +1,6 @@
 package com.minal.taskflow.config;
 
 import com.minal.taskflow.filter.JWTRequestFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,8 +18,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private JWTRequestFilter jwtRequestFilter;
+    private final JWTRequestFilter jwtRequestFilter;
+
+    public SecurityConfig(JWTRequestFilter jwtRequestFilter) {
+        this.jwtRequestFilter = jwtRequestFilter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -28,12 +30,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration auth) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration auth){
         return auth.getAuthenticationManager();
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http){
         return http.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health-check").permitAll()
                         .requestMatchers("/signup").permitAll()

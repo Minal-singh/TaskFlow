@@ -47,7 +47,7 @@ public class UserService {
         }
 
         log.error("User not found with query: {}", query);
-        throw new UserNotFoundException("User not found");
+        throw new UserNotFoundException();
     }
 
     public UserResponseDto createUser(UserRequestDto userDto){
@@ -73,7 +73,7 @@ public class UserService {
     ){
         log.info("Updating user: {}", userName);
         UserModel oldUser = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         if (userDto.getUserName() != null && !userDto.getUserName().trim().isEmpty()) {
             String newUserName = userDto.getUserName().trim();
@@ -112,7 +112,7 @@ public class UserService {
     public void deleteUser(String userName){
         log.info("Deleting user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
         userRepository.deleteById(user.getId());
         log.info("User deleted successfully: {}", userName);
     }
