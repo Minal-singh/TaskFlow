@@ -23,14 +23,14 @@ public class UserService {
 
     public UserService(
             TaskFlowMapper mapper, UserRepository userRepository, PasswordEncoder passwordEncoder
-    ) {
+                      ) {
         this.mapper = mapper;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
 
-    public UserResponseDto getUser(String query){
+    public UserResponseDto getUser(String query) {
         log.info("Fetching user by query: {}", query);
         // Try to find by username first
         Optional<UserModel> userByName = userRepository.findByUserName(query);
@@ -47,10 +47,10 @@ public class UserService {
         }
 
         log.error("User not found with query: {}", query);
-        throw new UserNotFoundException("User not found");
+        throw new UserNotFoundException();
     }
 
-    public UserResponseDto createUser(UserRequestDto userDto){
+    public UserResponseDto createUser(UserRequestDto userDto) {
         log.info("Creating user with username: {}", userDto.getUserName());
         if (userRepository.findByUserName(userDto.getUserName()).isPresent()) {
             log.warn("User creation failed: Username already exists - {}", userDto.getUserName());
@@ -70,10 +70,10 @@ public class UserService {
 
     public UserResponseDto updateUser(
             String userName, UserUpdateDto userDto
-    ){
+                                     ) {
         log.info("Updating user: {}", userName);
         UserModel oldUser = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
 
         if (userDto.getUserName() != null && !userDto.getUserName().trim().isEmpty()) {
             String newUserName = userDto.getUserName().trim();
@@ -109,10 +109,10 @@ public class UserService {
         return mapper.toUserDto(saved);
     }
 
-    public void deleteUser(String userName){
+    public void deleteUser(String userName) {
         log.info("Deleting user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+                .orElseThrow(UserNotFoundException::new);
         userRepository.deleteById(user.getId());
         log.info("User deleted successfully: {}", userName);
     }

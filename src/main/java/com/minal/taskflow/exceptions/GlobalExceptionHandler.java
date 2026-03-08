@@ -14,27 +14,29 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    private static final String ERROR_KEY = "error";
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleUserNotFoundException(UserNotFoundException e) {
         log.warn("User not found exception: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR_KEY, e.getMessage()));
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ResponseEntity<Map<String, String>> handleUserAlreadyExistsException(UserAlreadyExistsException e) {
         log.warn("User already exists exception: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(ERROR_KEY, e.getMessage()));
     }
 
     @ExceptionHandler(TaskNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleTaskNotFoundException(TaskNotFoundException e) {
         log.warn("Task not found exception: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(ERROR_KEY, e.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> exceptionHandler(Exception e) {
         log.error("Unexpected exception occurred", e);
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Internal server error"));
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(ERROR_KEY, "Internal server error"));
     }
 }

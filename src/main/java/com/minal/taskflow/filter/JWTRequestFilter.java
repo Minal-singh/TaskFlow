@@ -1,11 +1,12 @@
 package com.minal.taskflow.filter;
 
+import com.minal.taskflow.services.JwtBlacklistService;
 import com.minal.taskflow.utils.JWTUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,13 +18,19 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
+@Slf4j
 public class JWTRequestFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JWTUtils jwtUtils;
+    private final JWTUtils jwtUtils;
+    private final UserDetailsService userDetailsService;
+    private final JwtBlacklistService jwtBlacklistService;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+    public JWTRequestFilter(JWTUtils jwtUtils, UserDetailsService userDetailsService,
+                            JwtBlacklistService jwtBlacklistService) {
+        this.jwtUtils = jwtUtils;
+        this.userDetailsService = userDetailsService;
+        this.jwtBlacklistService = jwtBlacklistService;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -39,16 +46,25 @@ public class JWTRequestFilter extends OncePerRequestFilter {
             userName = jwtUtils.extractUserName(token);
         }
         if (userName != null) {
+            if (jwtBlacklistService.isBlacklisted(token)) {
+                log.warn("BLACKLISTED TOKEN BLOCKED: jti={}",
+                        jwtUtils.extractAllClaims(token).get("jti"));
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Token has been revoked");
+                return;
+            }
             UserDetails userDetails = userDetailsService.loadUserByUsername(userName);
-            if (jwtUtils.validateToken(token)) {
+            if (Boolean.TRUE.equals(jwtUtils.validateToken(token))) {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities()
                 );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                log.debug("JWT token validated for user: {}", userName);
+            } else {
+                log.warn("JWT token validation failed for user: {}", userName);
             }
         }
         filterChain.doFilter(request, response);
     }
 }
-

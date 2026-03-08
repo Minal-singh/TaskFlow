@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -31,6 +32,8 @@ public class JWTUtils {
     public String generateToken(String userName) {
         log.debug("Generating JWT token for user: {}", userName);
         Map<String, Object> claims = new HashMap<>();
+        claims.put("jti", UUID.randomUUID().toString());
+        claims.put("Role", "USER");
         return createToken(claims, userName);
     }
 
@@ -78,7 +81,7 @@ public class JWTUtils {
         return extractAllClaims(token).getSubject();
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
         try {
             log.debug("Extracting all claims from token");
             return Jwts.parser()
