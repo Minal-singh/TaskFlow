@@ -1,5 +1,6 @@
 package com.minal.taskflow.filter;
 
+import com.minal.taskflow.services.JwtBlacklistService;
 import com.minal.taskflow.utils.JWTUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -22,10 +23,13 @@ public class JWTRequestFilter extends OncePerRequestFilter {
 
     private final JWTUtils jwtUtils;
     private final UserDetailsService userDetailsService;
+    private final JwtBlacklistService jwtBlacklistService;
 
-    public JWTRequestFilter(JWTUtils jwtUtils, UserDetailsService userDetailsService) {
+    public JWTRequestFilter(JWTUtils jwtUtils, UserDetailsService userDetailsService,
+                            JwtBlacklistService jwtBlacklistService) {
         this.jwtUtils = jwtUtils;
         this.userDetailsService = userDetailsService;
+        this.jwtBlacklistService = jwtBlacklistService;
     }
 
     @Override
@@ -42,6 +46,13 @@ public class JWTRequestFilter extends OncePerRequestFilter {
             userName = jwtUtils.extractUserName(token);
         }
         if (userName != null) {
+            if (jwtBlacklistService.isBlacklisted(token)) {
+                log.warn("BLACKLISTED TOKEN BLOCKED: jti={}",
+                        jwtUtils.extractAllClaims(token).get("jti"));
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("Token has been revoked");
+                return;
+            }
             UserDetails userDetails = userDetailsService.loadUserByUsername(userName);
             if (Boolean.TRUE.equals(jwtUtils.validateToken(token))) {
                 UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(

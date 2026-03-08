@@ -11,6 +11,9 @@ import com.minal.taskflow.models.UserModel;
 import com.minal.taskflow.repositories.TaskRepository;
 import com.minal.taskflow.repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,13 +30,15 @@ public class TaskService {
             TaskRepository taskRepository,
             TaskFlowMapper mapper,
             UserRepository userRepository
-    ) {
+                      ) {
         this.taskRepository = taskRepository;
         this.mapper = mapper;
         this.userRepository = userRepository;
     }
 
+    @Cacheable(value = "tasks", key = "#id + ':' + #userName")
     public TaskResponseDto getTaskById(UUID id, String userName) {
+        log.debug("CACHE MISS: - Fetching task {} for user {}", id, userName);
         log.info("Fetching task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)
                 .orElseThrow(UserNotFoundException::new);
@@ -48,6 +53,7 @@ public class TaskService {
         return mapper.toTaskDto(task);
     }
 
+    @CachePut(value = "tasks", key = "#result.id + ':' + #userName")
     public TaskResponseDto createTask(TaskRequestDto newTask, String userName) {
         log.info("Creating task for user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
@@ -60,6 +66,7 @@ public class TaskService {
         return mapper.toTaskDto(saved);
     }
 
+    @CachePut(value = "tasks", key = "#id + ':' + #userName")
     public TaskResponseDto updateTask(UUID id, String userName, TaskUpdateDto newTask) {
         log.info("Updating task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)
@@ -96,6 +103,7 @@ public class TaskService {
         return mapper.toTaskDto(saved);
     }
 
+    @CacheEvict(value = "tasks", key = "#id + ':' + #userName")
     public void deleteTask(UUID id, String userName) {
         log.info("Deleting task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)

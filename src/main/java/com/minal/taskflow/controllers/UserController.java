@@ -5,13 +5,11 @@ import com.minal.taskflow.dto.UserUpdateDto;
 import com.minal.taskflow.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/users")
@@ -35,7 +33,8 @@ public class UserController {
 
     @PutMapping
     @Operation(summary = "Update user information")
-    public ResponseEntity<UserResponseDto> updateUser(@RequestBody UserUpdateDto userDto, @AuthenticationPrincipal UserDetails userDetails) {
+    public ResponseEntity<UserResponseDto> updateUser(@RequestBody UserUpdateDto userDto,
+                                                      @AuthenticationPrincipal UserDetails userDetails) {
         log.info("PUT /users - Updating user profile for: {}", userDetails.getUsername());
         UserResponseDto user = userService.updateUser(userDetails.getUsername(), userDto);
         log.debug("User profile updated successfully for: {}", userDetails.getUsername());
