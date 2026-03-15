@@ -1,15 +1,12 @@
 package com.minal.taskflow.models;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 
+@Builder
 @Entity
 @Data
 @Table(name = "users", indexes = {
@@ -17,6 +14,7 @@ import java.util.UUID;
         @Index(name = "email_idx", columnList = "email")
 })
 @NoArgsConstructor
+@AllArgsConstructor
 public class UserModel {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -37,4 +35,8 @@ public class UserModel {
     @ToString.Exclude
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<TaskModel> tasks = new ArrayList<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<TaskWatcher> watchedTasks = new HashSet<>();
 }
