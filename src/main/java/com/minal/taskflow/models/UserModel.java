@@ -33,8 +33,12 @@ public class UserModel {
     private String role = "USER";
 
     @ToString.Exclude
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<TaskModel> tasks = new ArrayList<>();
+    @OneToMany(mappedBy = "assignee", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    private List<TaskModel> assignedTasks = new ArrayList<>();
+
+    @ToString.Exclude
+    @OneToMany(mappedBy = "reporter", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<TaskModel> reportedTasks = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

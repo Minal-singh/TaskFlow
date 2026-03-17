@@ -14,5 +14,6 @@ public class TaskUpdateDto {
     private String description;
     private String priority;
     private String status;
+    private String assignee;
     private LocalDateTime dueDate;
 }

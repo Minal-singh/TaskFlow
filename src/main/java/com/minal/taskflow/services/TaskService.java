@@ -36,16 +36,14 @@ public class TaskService {
         this.userRepository = userRepository;
     }
 
-    @Cacheable(value = "tasks", key = "#id + ':' + #userName")
+    @Cacheable(value = "tasks", key = "#id")
     public TaskResponseDto getTaskById(UUID id, String userName) {
-        log.debug("CACHE MISS: - Fetching task {} for user {}", id, userName);
-        log.info("Fetching task with id: {} for user: {}", id, userName);
-        UserModel user = userRepository.findByUserName(userName)
-                .orElseThrow(UserNotFoundException::new);
+        log.debug("CACHE MISS: - Fetching task {}", id);
+        log.info("Fetching task with id: {}", id);
 
-        TaskModel task = taskRepository.findByIdAndUser(id, user)
+        TaskModel task = taskRepository.findById(id)
                 .orElseThrow(() -> {
-                    log.error("Task not found with id: {} for user: {}", id, userName);
+                    log.error("Task not found with id: {}", id);
                     return new TaskNotFoundException();
                 });
 
@@ -53,30 +51,48 @@ public class TaskService {
         return mapper.toTaskDto(task);
     }
 
-    @CachePut(value = "tasks", key = "#result.id + ':' + #userName")
+    @CachePut(value = "tasks", key = "#result.id")
     public TaskResponseDto createTask(TaskRequestDto newTask, String userName) {
         log.info("Creating task for user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
                 .orElseThrow(UserNotFoundException::new);
 
+        if (newTask.getAssigneeUserName() == null || newTask.getAssigneeUserName().isEmpty()) {
+            log.debug("No assignee specified for task, defaulting to reporter: {}", userName);
+            newTask.setAssigneeUserName(userName);
+        }
+        log.debug("Assigning task to user: {}", newTask.getAssigneeUserName());
+        UserModel assignee = userRepository.findByUserName(newTask.getAssigneeUserName())
+                .orElseThrow(() -> {
+                    log.error("Assignee user not found: {}", newTask.getAssigneeUserName());
+                    return new UserNotFoundException("Assignee user not found");
+                });
+        log.debug("Assignee user found: {}", assignee.getUserName());
+
         TaskModel task = mapper.toTaskEntity(newTask);
-        task.setUser(user);
+        task.setReporter(user);
+        task.setAssignee(assignee);
         TaskModel saved = taskRepository.save(task);
         log.info("Task created successfully with id: {} for user: {}", saved.getId(), userName);
         return mapper.toTaskDto(saved);
     }
 
-    @CachePut(value = "tasks", key = "#id + ':' + #userName")
+    @CachePut(value = "tasks", key = "#id")
     public TaskResponseDto updateTask(UUID id, String userName, TaskUpdateDto newTask) {
         log.info("Updating task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)
                 .orElseThrow(UserNotFoundException::new);
 
-        TaskModel oldTask = taskRepository.findByIdAndUser(id, user)
+        TaskModel oldTask = taskRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Task not found for update with id: {} for user: {}", id, userName);
                     return new TaskNotFoundException();
                 });
+
+        if (oldTask.getReporter() != user && oldTask.getAssignee() != user) {
+            log.error("Unauthorized update attempt on task id: {} by user: {}", id, userName);
+            throw new TaskNotFoundException("Task not found for user");
+        }
 
         if (newTask.getTitle() != null && !newTask.getTitle().isEmpty()) {
             log.debug("Updating task title from '{}' to '{}'", oldTask.getTitle(), newTask.getTitle());
@@ -85,6 +101,15 @@ public class TaskService {
         if (newTask.getDescription() != null && !newTask.getDescription().isEmpty()) {
             log.debug("Updating task description");
             oldTask.setDescription(newTask.getDescription());
+        }
+        if (newTask.getAssignee() != null && !newTask.getAssignee().isEmpty()) {
+            log.debug("Updating task assignee from '{}' to '{}'", oldTask.getAssignee().getUserName(), newTask.getAssignee());
+            UserModel newAssignee = userRepository.findByUserName(newTask.getAssignee())
+                    .orElseThrow(() -> {
+                        log.error("New assignee user not found: {}", newTask.getAssignee());
+                        return new UserNotFoundException("New assignee user not found");
+                    });
+            oldTask.setAssignee(newAssignee);
         }
         if (newTask.getPriority() != null && !newTask.getPriority().isEmpty()) {
             log.debug("Updating task priority from '{}' to '{}'", oldTask.getPriority(), newTask.getPriority());
@@ -103,29 +128,46 @@ public class TaskService {
         return mapper.toTaskDto(saved);
     }
 
-    @CacheEvict(value = "tasks", key = "#id + ':' + #userName")
+    @CacheEvict(value = "tasks", key = "#id")
     public void deleteTask(UUID id, String userName) {
         log.info("Deleting task with id: {} for user: {}", id, userName);
         UserModel user = userRepository.findByUserName(userName)
                 .orElseThrow(UserNotFoundException::new);
 
-        TaskModel task = taskRepository.findByIdAndUser(id, user)
+        TaskModel task = taskRepository.findById(id)
                 .orElseThrow(() -> {
                     log.error("Task not found for deletion with id: {} for user: {}", id, userName);
                     return new TaskNotFoundException();
                 });
 
+        if (task.getReporter() != user && task.getAssignee() != user) {
+            log.error("Unauthorized delete attempt on task id: {} by user: {}", id, userName);
+            throw new TaskNotFoundException("Task not found for user");
+        }
         taskRepository.deleteById(task.getId());
         log.info("Task deleted successfully: {}", id);
     }
 
-    public List<TaskResponseDto> getAllTasksForUser(String userName) {
-        log.info("Fetching all tasks for user: {}", userName);
+    public List<TaskResponseDto> getAllTasks() {
+        log.info("Fetching all tasks");
+        List<TaskModel> tasks = (List<TaskModel>) taskRepository.findAll();
+        log.info("Retrieved total {} tasks", tasks.size());
+        return mapper.toTaskDtos(tasks);
+    }
+
+    public List<TaskResponseDto> getTasksAssignedToUser(String userName) {
+        log.info("Fetching tasks assigned to user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
                 .orElseThrow(UserNotFoundException::new);
+        List<TaskModel> tasks = taskRepository.findByAssignee(user);
+        return mapper.toTaskDtos(tasks);
+    }
 
-        List<TaskModel> tasks = taskRepository.findByUser(user);
-        log.info("Retrieved {} tasks for user: {}", tasks.size(), userName);
+    public List<TaskResponseDto> getTasksReportedByUser(String userName) {
+        log.info("Fetching tasks reported by user: {}", userName);
+        UserModel user = userRepository.findByUserName(userName)
+                .orElseThrow(UserNotFoundException::new);
+        List<TaskModel> tasks = taskRepository.findByReporter(user);
         return mapper.toTaskDtos(tasks);
     }
 }

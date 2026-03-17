@@ -63,10 +63,22 @@ public class TaskController {
     }
 
     @GetMapping
-    @Operation(summary = "Get all tasks for the authenticated user")
+    @Operation(summary = "Get all tasks for the all users")
     public ResponseEntity<List<TaskResponseDto>> getAllTasksForUser(@AuthenticationPrincipal UserDetails userDetails) {
-        log.info("Fetching all tasks for user: {}", userDetails.getUsername());
-        return ResponseEntity.ok().cacheControl(CacheControl.maxAge(3, TimeUnit.SECONDS))
-                .body(taskService.getAllTasksForUser(userDetails.getUsername()));
+        log.info("Fetching all tasks");
+        return ResponseEntity.ok().cacheControl(CacheControl.maxAge(5, TimeUnit.SECONDS))
+                .body(taskService.getAllTasks());
+    }
+
+    @GetMapping("/assigned")
+    public ResponseEntity<List<TaskResponseDto>> getAssignedTasks(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(taskService.getTasksAssignedToUser(userDetails.getUsername()));
+    }
+
+    @GetMapping("/reported")
+    public ResponseEntity<List<TaskResponseDto>> getReportedTasks(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(taskService.getTasksReportedByUser(userDetails.getUsername()));
     }
 }
