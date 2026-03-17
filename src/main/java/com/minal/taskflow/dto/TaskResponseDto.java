@@ -20,5 +20,7 @@ public class TaskResponseDto implements Serializable {
     private String description;
     private String priority;
     private String status;
+    private String assignee;
+    private String reporter;
     private LocalDateTime dueDate;
 }

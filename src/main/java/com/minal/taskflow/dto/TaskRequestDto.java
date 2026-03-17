@@ -24,4 +24,8 @@ public class TaskRequestDto {
 
     @NonNull
     private LocalDateTime dueDate;
+
+    // it will be ignored by mapper as there is no matching field in Task entity,
+    // but it will be used to find the assignee user and set it in Task entity
+    private String assigneeUserName;
 }

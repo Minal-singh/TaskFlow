@@ -7,6 +7,7 @@ import com.minal.taskflow.exceptions.UserAlreadyExistsException;
 import com.minal.taskflow.exceptions.UserNotFoundException;
 import com.minal.taskflow.mappers.TaskFlowMapper;
 import com.minal.taskflow.models.UserModel;
+import com.minal.taskflow.repositories.TaskRepository;
 import com.minal.taskflow.repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,13 +21,18 @@ public class UserService {
     private final TaskFlowMapper mapper;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TaskRepository taskRepository;
 
     public UserService(
-            TaskFlowMapper mapper, UserRepository userRepository, PasswordEncoder passwordEncoder
+            TaskFlowMapper mapper,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            TaskRepository taskRepository
                       ) {
         this.mapper = mapper;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.taskRepository = taskRepository;
     }
 
 
@@ -113,6 +119,15 @@ public class UserService {
         log.info("Deleting user: {}", userName);
         UserModel user = userRepository.findByUserName(userName)
                 .orElseThrow(UserNotFoundException::new);
+
+        // Reassign assigned tasks to reporter before deleting user
+        taskRepository.findByAssignee(user).forEach(task -> {
+            if (!task.getReporter().equals(user)) {
+                task.setAssignee(task.getReporter());
+                taskRepository.save(task);
+                log.debug("Reassigned task {} to reporter {}", task.getId(), task.getReporter().getUserName());
+            }
+        });
         userRepository.deleteById(user.getId());
         log.info("User deleted successfully: {}", userName);
     }
