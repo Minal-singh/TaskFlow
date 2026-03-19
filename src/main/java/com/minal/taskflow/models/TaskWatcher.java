@@ -29,6 +29,7 @@ public class TaskWatcher {
     @JoinColumn(name = "user_id")
     private UserModel user;
 
+    @Builder.Default
     @Column(nullable = false)
     private LocalDateTime watchedAt = LocalDateTime.now();
 }

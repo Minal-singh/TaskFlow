@@ -41,6 +41,5 @@ public class UserModel {
     private List<TaskModel> reportedTasks = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private Set<TaskWatcher> watchedTasks = new HashSet<>();
+    private Set<TaskWatcher> watchedTasks;
 }

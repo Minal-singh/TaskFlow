@@ -7,8 +7,11 @@ import com.minal.taskflow.exceptions.TaskNotFoundException;
 import com.minal.taskflow.exceptions.UserNotFoundException;
 import com.minal.taskflow.mappers.TaskFlowMapper;
 import com.minal.taskflow.models.TaskModel;
+import com.minal.taskflow.models.TaskWatcher;
+import com.minal.taskflow.models.TaskWatcherId;
 import com.minal.taskflow.models.UserModel;
 import com.minal.taskflow.repositories.TaskRepository;
+import com.minal.taskflow.repositories.TaskWatcherRepository;
 import com.minal.taskflow.repositories.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -16,6 +19,7 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,15 +29,18 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final TaskFlowMapper mapper;
     private final UserRepository userRepository;
+    private final TaskWatcherRepository taskWatcherRepository;
 
     public TaskService(
             TaskRepository taskRepository,
             TaskFlowMapper mapper,
-            UserRepository userRepository
+            UserRepository userRepository,
+            TaskWatcherRepository taskWatcherRepository
                       ) {
         this.taskRepository = taskRepository;
         this.mapper = mapper;
         this.userRepository = userRepository;
+        this.taskWatcherRepository = taskWatcherRepository;
     }
 
     @Cacheable(value = "tasks", key = "#id")
@@ -103,7 +110,8 @@ public class TaskService {
             oldTask.setDescription(newTask.getDescription());
         }
         if (newTask.getAssignee() != null && !newTask.getAssignee().isEmpty()) {
-            log.debug("Updating task assignee from '{}' to '{}'", oldTask.getAssignee().getUserName(), newTask.getAssignee());
+            log.debug("Updating task assignee from '{}' to '{}'", oldTask.getAssignee().getUserName(),
+                    newTask.getAssignee());
             UserModel newAssignee = userRepository.findByUserName(newTask.getAssignee())
                     .orElseThrow(() -> {
                         log.error("New assignee user not found: {}", newTask.getAssignee());
@@ -169,5 +177,77 @@ public class TaskService {
                 .orElseThrow(UserNotFoundException::new);
         List<TaskModel> tasks = taskRepository.findByReporter(user);
         return mapper.toTaskDtos(tasks);
+    }
+
+    public List<TaskResponseDto> getTasksWatchedByUser(String userName) {
+        log.info("Fetching tasks watched by user: {}", userName);
+        List<TaskModel> tasks = taskWatcherRepository.findTasksByWatcherUserName(userName);
+        return mapper.toTaskDtos(tasks);
+    }
+
+    public void addWatcher(UUID taskId, String watcherUserName, String requesterUserName) {
+        log.info("Adding watcher '{}' to task '{}' by requester '{}'", watcherUserName, taskId, requesterUserName);
+
+        TaskModel task = taskRepository.findById(taskId)
+                .orElseThrow(() -> {
+                    log.error("Task not found for adding watcher with id: {} by requester: {}", taskId,
+                            requesterUserName);
+                    return new TaskNotFoundException();
+                });
+
+        UserModel watcher = userRepository.findByUserName(watcherUserName)
+                .orElseThrow(() -> {
+                    log.error("Watcher user not found: {}", watcherUserName);
+                    return new UserNotFoundException("Watcher user not found");
+                });
+
+        if (taskWatcherRepository.existsByTaskIdAndUserId(taskId, watcher.getId())) {
+            log.warn("Watcher '{}' is already watching task '{}'", watcherUserName, taskId);
+            return; // No need to add again, just return
+        }
+
+        TaskWatcherId taskWatcherId = new TaskWatcherId(taskId, watcher.getId());
+        TaskWatcher taskWatcher = TaskWatcher.builder()
+                .id(taskWatcherId)
+                .task(task)
+                .user(watcher)
+                .watchedAt(LocalDateTime.now())
+                .build();
+        taskWatcherRepository.save(taskWatcher);
+        log.info("Watcher '{}' added successfully to task '{}'", watcherUserName, taskId);
+    }
+
+    public List<String> getWatchers(UUID taskId, String requesterUserName) {
+        log.info("Fetching watchers for task '{}' by requester '{}'", taskId, requesterUserName);
+
+        List<String> watchers = taskRepository.findWatcherUserNamesByTaskId(taskId);
+        log.info("Retrieved {} watchers for task '{}'", watchers.size(), taskId);
+        return watchers;
+    }
+
+    public void removeWatcher(UUID taskId, String watcherUserName, String requesterUserName) {
+        log.info("Removing watcher '{}' from task '{}' by requester '{}'", watcherUserName, taskId, requesterUserName);
+
+        taskRepository.findById(taskId)
+                .orElseThrow(() -> {
+                    log.error("Task not found for removing watcher with id: {} by requester: {}", taskId,
+                            requesterUserName);
+                    return new TaskNotFoundException();
+                });
+
+        UserModel watcher = userRepository.findByUserName(watcherUserName)
+                .orElseThrow(() -> {
+                    log.error("Watcher user not found: {}", watcherUserName);
+                    return new UserNotFoundException("Watcher user not found");
+                });
+
+        if (!taskWatcherRepository.existsByTaskIdAndUserId(taskId, watcher.getId())) {
+            log.warn("Watcher '{}' is not watching task '{}'", watcherUserName, taskId);
+            return; // Watcher is not watching, nothing to remove
+        }
+
+        TaskWatcherId taskWatcherId = new TaskWatcherId(taskId, watcher.getId());
+        taskWatcherRepository.deleteById(taskWatcherId);
+        log.info("Watcher '{}' removed successfully from task '{}'", watcherUserName, taskId);
     }
 }

@@ -3,6 +3,7 @@ package com.minal.taskflow.controllers;
 import com.minal.taskflow.dto.TaskRequestDto;
 import com.minal.taskflow.dto.TaskResponseDto;
 import com.minal.taskflow.dto.TaskUpdateDto;
+import com.minal.taskflow.dto.WatcherRequestDto;
 import com.minal.taskflow.services.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -80,5 +81,31 @@ public class TaskController {
     public ResponseEntity<List<TaskResponseDto>> getReportedTasks(
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(taskService.getTasksReportedByUser(userDetails.getUsername()));
+    }
+
+    @GetMapping("/watching")
+    public ResponseEntity<List<TaskResponseDto>> getWatchingTasks(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(taskService.getTasksWatchedByUser(userDetails.getUsername()));
+    }
+
+    @PostMapping("/{id}/watchers")
+    public ResponseEntity<Void> addWatcher(@PathVariable UUID id, @RequestBody WatcherRequestDto watcherRequestDto,
+                                             @AuthenticationPrincipal UserDetails userDetails) {
+        taskService.addWatcher(id, watcherRequestDto.getUserName(), userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/watchers")
+    public ResponseEntity<List<String>> getWatchers(@PathVariable UUID id,
+                                                    @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(taskService.getWatchers(id, userDetails.getUsername()));
+    }
+
+    @DeleteMapping("/{id}/watchers")
+    public ResponseEntity<Void> removeWatcher(@PathVariable UUID id, @RequestBody WatcherRequestDto watcherRequestDto,
+                                                @AuthenticationPrincipal UserDetails userDetails) {
+        taskService.removeWatcher(id, watcherRequestDto.getUserName(), userDetails.getUsername());
+        return ResponseEntity.noContent().build();
     }
 }

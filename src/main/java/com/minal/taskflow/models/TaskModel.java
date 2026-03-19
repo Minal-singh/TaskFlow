@@ -1,10 +1,7 @@
 package com.minal.taskflow.models;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -17,6 +14,8 @@ import java.util.UUID;
 @Table(name = "tasks")
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"watchers"})  // ← Critical
+@EqualsAndHashCode(exclude = {"watchers", "reporter", "assignee"})
 public class TaskModel {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -45,20 +44,5 @@ public class TaskModel {
     private UserModel reporter;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private Set<TaskWatcher> watchers = new HashSet<>();
-
-    public void addWatcher(UserModel user) {
-        TaskWatcher watcher = TaskWatcher.builder()
-                .id(new TaskWatcherId(this.id, user.getId()))
-                .task(this)
-                .user(user)
-                .build();
-        watchers.add(watcher);
-        user.getWatchedTasks().add(watcher);
-    }
-
-    public void removeWatcher(UserModel user) {
-        watchers.removeIf(w -> w.getUser().getId().equals(user.getId()));
-    }
+    private Set<TaskWatcher> watchers;
 }
