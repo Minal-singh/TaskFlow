@@ -1,9 +1,6 @@
 package com.minal.taskflow.controllers;
 
-import com.minal.taskflow.dto.TaskRequestDto;
-import com.minal.taskflow.dto.TaskResponseDto;
-import com.minal.taskflow.dto.TaskUpdateDto;
-import com.minal.taskflow.dto.WatcherRequestDto;
+import com.minal.taskflow.dto.*;
 import com.minal.taskflow.services.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -91,7 +88,7 @@ public class TaskController {
 
     @PostMapping("/{id}/watchers")
     public ResponseEntity<Void> addWatcher(@PathVariable UUID id, @RequestBody WatcherRequestDto watcherRequestDto,
-                                             @AuthenticationPrincipal UserDetails userDetails) {
+                                           @AuthenticationPrincipal UserDetails userDetails) {
         taskService.addWatcher(id, watcherRequestDto.getUserName(), userDetails.getUsername());
         return ResponseEntity.noContent().build();
     }
@@ -104,8 +101,43 @@ public class TaskController {
 
     @DeleteMapping("/{id}/watchers")
     public ResponseEntity<Void> removeWatcher(@PathVariable UUID id, @RequestBody WatcherRequestDto watcherRequestDto,
-                                                @AuthenticationPrincipal UserDetails userDetails) {
+                                              @AuthenticationPrincipal UserDetails userDetails) {
         taskService.removeWatcher(id, watcherRequestDto.getUserName(), userDetails.getUsername());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<List<CommentResponseDto>> getComments(@PathVariable UUID id,
+                                                                @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(taskService.getComments(id, userDetails.getUsername()));
+    }
+
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<CommentResponseDto> addComment(@PathVariable UUID id,
+                                                         @RequestBody CommentRequestDto commentRequestDto,
+                                                         @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(taskService.addComment(id, commentRequestDto, userDetails.getUsername()));
+    }
+
+    @DeleteMapping("/{taskId}/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(@PathVariable UUID taskId, @PathVariable UUID commentId,
+                                              @AuthenticationPrincipal UserDetails userDetails) {
+        taskService.deleteComment(taskId, commentId, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{taskId}/comments/{commentId}")
+    public ResponseEntity<CommentResponseDto> updateComment(@PathVariable UUID taskId, @PathVariable UUID commentId,
+                                                            @RequestBody CommentRequestDto commentRequestDto,
+                                                            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(
+                taskService.updateComment(taskId, commentId, commentRequestDto, userDetails.getUsername()));
+    }
+
+    @GetMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<CommentResponseDto> getCommentById(@PathVariable UUID id, @PathVariable UUID commentId,
+                                                             @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(taskService.getCommentById(id, commentId, userDetails.getUsername()));
     }
 }

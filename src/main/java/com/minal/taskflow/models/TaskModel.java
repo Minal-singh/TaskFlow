@@ -14,8 +14,8 @@ import java.util.UUID;
 @Table(name = "tasks")
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = {"watchers"})  // ← Critical
-@EqualsAndHashCode(exclude = {"watchers", "reporter", "assignee"})
+@ToString(exclude = {"watchers", "comments"})
+@EqualsAndHashCode(exclude = {"watchers", "reporter", "assignee", "comments"})
 public class TaskModel {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -35,6 +35,10 @@ public class TaskModel {
     @Column(nullable = false)
     private LocalDateTime dueDate;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
     private UserModel assignee;
@@ -45,4 +49,7 @@ public class TaskModel {
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<TaskWatcher> watchers;
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskComment> comments = new HashSet<>();
 }

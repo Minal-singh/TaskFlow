@@ -121,8 +121,9 @@ public class UserService {
                 .orElseThrow(UserNotFoundException::new);
 
         // Reassign assigned tasks to reporter before deleting user
-        taskRepository.findByAssignee(user).forEach(task -> {
-            if (!task.getReporter().equals(user)) {
+        // Using direct userName lookup avoids redundant user fetch
+        taskRepository.findByAssigneeUserName(userName).forEach(task -> {
+            if (!task.getReporter().getId().equals(user.getId())) {
                 task.setAssignee(task.getReporter());
                 taskRepository.save(task);
                 log.debug("Reassigned task {} to reporter {}", task.getId(), task.getReporter().getUserName());
